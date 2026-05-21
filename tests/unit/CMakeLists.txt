@@ -50,3 +50,4 @@ function(flameshot_add_unit_test)
 endfunction()
 
 add_subdirectory(sanity)
+add_subdirectory(cli)
