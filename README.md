@@ -85,6 +85,7 @@
 - [License](#license)
 - [Privacy Policy](#privacy-policy)
 - [Code Signing Policy](#code-signing-policy)
+- [Security](#security)
 - [Contribute](#contribute)
 - [Acknowledgment](#acknowledgment)
 
@@ -578,6 +579,10 @@ This program will not transfer any information to other networked systems unless
 For Windows binaries, this program uses free code signing provided by [SignPath.io](https://signpath.io?utm_source=foundation&utm_medium=github&utm_campaign=flameshot), and a certificate by the [SignPath Foundation](https://signpath.org?utm_source=foundation&utm_medium=github&utm_campaign=flameshot).
 
 Code signing is currently a manual process so not every patch release will be signed.
+
+## Security
+
+For supported versions and how to report a vulnerability privately, see [SECURITY.md](SECURITY.md).
 
 ## Contribute
 
