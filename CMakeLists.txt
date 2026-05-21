@@ -13,6 +13,12 @@ project(
 set(PROJECT_NAME_CAPITALIZED "Flameshot")
 
 include(FetchContent)
+# FetchContent pinning policy: every FetchContent_Declare in this file must
+# use a commit SHA as GIT_TAG, never a branch name and never a tag. Tags can
+# be force-moved upstream; branches always move. Commit SHAs guarantee that
+# two consecutive `cmake` runs produce identical source trees. When updating
+# a dependency, bump the SHA in this file and note the upstream version in
+# the surrounding comment for human readability.
 #Must be set before fetching external content!
 #QT_DEFAULT_MAJOR_VERSION used by QHotkey
 set(QT_DEFAULT_MAJOR_VERSION 6 CACHE STRING "")
@@ -124,7 +130,10 @@ if(USE_KDSINGLEAPPLICATION)
       FetchContent_Declare(
         kdsingleApplication
         GIT_REPOSITORY https://github.com/KDAB/KDSingleApplication.git
-        GIT_TAG v1.2.0
+        # v1.2.0 — annotated tag dereferences to this commit. Pinned by SHA
+        # rather than tag so an upstream tag rewrite cannot silently shift
+        # what we build.
+        GIT_TAG 3186a158f8e6565e89f5983b4028c892737844ff
       )
       FetchContent_MakeAvailable(kdsingleApplication)
     endif()
