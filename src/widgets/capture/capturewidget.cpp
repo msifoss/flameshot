@@ -372,7 +372,7 @@ void CaptureWidget::initButtons()
                 QString shortcut =
                   ConfigHandler().shortcut(QVariant::fromValue(t).toString());
                 if (!shortcut.isNull()) {
-                    auto shortcuts = newShortcut(shortcut, this, nullptr);
+                    auto shortcuts = newShortcut(shortcut, this);
                     for (auto* sc : shortcuts) {
                         connect(sc, &QShortcut::activated, this, [=, this]() {
                             setState(b);
@@ -1646,76 +1646,69 @@ void CaptureWidget::removeToolObject(int index)
 
 void CaptureWidget::initShortcuts()
 {
-    newShortcut(
-      QKeySequence(ConfigHandler().shortcut("TYPE_UNDO")), this, SLOT(undo()));
+    // Local helper: bind every shortcut produced by newShortcut() — there can
+    // be two when the key sequence contains Enter/Return — to the same
+    // member-function pointer. Using PMF connects means a renamed or removed
+    // slot fails at compile time instead of silently doing nothing at
+    // runtime, which was the historical failure mode of the old SLOT() form.
+    auto bind = [this](const QString& type,
+                       QWidget* parent,
+                       auto&& memberFn) {
+        const auto shortcuts =
+          newShortcut(QKeySequence(ConfigHandler().shortcut(type)), parent);
+        for (auto* sc : shortcuts) {
+            connect(sc, &QShortcut::activated, parent, memberFn);
+        }
+    };
 
-    newShortcut(
-      QKeySequence(ConfigHandler().shortcut("TYPE_REDO")), this, SLOT(redo()));
+    bind("TYPE_UNDO",         this, &CaptureWidget::undo);
+    bind("TYPE_REDO",         this, &CaptureWidget::redo);
+    bind("TYPE_TOGGLE_PANEL", this, &CaptureWidget::togglePanel);
+    bind("TYPE_GRAB_COLOR",   this, &CaptureWidget::startColorGrab);
 
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_TOGGLE_PANEL")),
-                this,
-                SLOT(togglePanel()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_GRAB_COLOR")),
-                this,
-                SLOT(startColorGrab()));
+    bind("TYPE_RESIZE_LEFT",      m_selection, &SelectionWidget::resizeLeft);
+    bind("TYPE_RESIZE_RIGHT",     m_selection, &SelectionWidget::resizeRight);
+    bind("TYPE_RESIZE_UP",        m_selection, &SelectionWidget::resizeUp);
+    bind("TYPE_RESIZE_DOWN",      m_selection, &SelectionWidget::resizeDown);
+    bind("TYPE_SYM_RESIZE_LEFT",  m_selection, &SelectionWidget::symResizeLeft);
+    bind("TYPE_SYM_RESIZE_RIGHT", m_selection, &SelectionWidget::symResizeRight);
+    bind("TYPE_SYM_RESIZE_UP",    m_selection, &SelectionWidget::symResizeUp);
+    bind("TYPE_SYM_RESIZE_DOWN",  m_selection, &SelectionWidget::symResizeDown);
 
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_RESIZE_LEFT")),
-                m_selection,
-                SLOT(resizeLeft()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_RESIZE_RIGHT")),
-                m_selection,
-                SLOT(resizeRight()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_RESIZE_UP")),
-                m_selection,
-                SLOT(resizeUp()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_RESIZE_DOWN")),
-                m_selection,
-                SLOT(resizeDown()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_SYM_RESIZE_LEFT")),
-                m_selection,
-                SLOT(symResizeLeft()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_SYM_RESIZE_RIGHT")),
-                m_selection,
-                SLOT(symResizeRight()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_SYM_RESIZE_UP")),
-                m_selection,
-                SLOT(symResizeUp()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_SYM_RESIZE_DOWN")),
-                m_selection,
-                SLOT(symResizeDown()));
+    bind("TYPE_MOVE_LEFT",  m_selection, &SelectionWidget::moveLeft);
+    bind("TYPE_MOVE_RIGHT", m_selection, &SelectionWidget::moveRight);
+    bind("TYPE_MOVE_UP",    m_selection, &SelectionWidget::moveUp);
+    bind("TYPE_MOVE_DOWN",  m_selection, &SelectionWidget::moveDown);
 
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_MOVE_LEFT")),
-                m_selection,
-                SLOT(moveLeft()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_MOVE_RIGHT")),
-                m_selection,
-                SLOT(moveRight()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_MOVE_UP")),
-                m_selection,
-                SLOT(moveUp()));
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_MOVE_DOWN")),
-                m_selection,
-                SLOT(moveDown()));
+    bind("TYPE_CANCEL",              this, &CaptureWidget::cancel);
+    bind("TYPE_DELETE_CURRENT_TOOL", this, &CaptureWidget::deleteCurrentTool);
 
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_CANCEL")),
-                this,
-                SLOT(cancel()));
+    // commitCurrentTool() returns bool, which the QShortcut::activated()
+    // signal cannot bind to directly. Wrap in a lambda that discards the
+    // return value — preserves the historical SLOT() behavior, where the
+    // bool was silently dropped anyway.
+    {
+        const auto shortcuts = newShortcut(
+          QKeySequence(ConfigHandler().shortcut("TYPE_COMMIT_CURRENT_TOOL")),
+          this);
+        for (auto* sc : shortcuts) {
+            connect(sc, &QShortcut::activated, this, [this]() {
+                commitCurrentTool();
+            });
+        }
+    }
 
-    newShortcut(
-      QKeySequence(ConfigHandler().shortcut("TYPE_DELETE_CURRENT_TOOL")),
-      this,
-      SLOT(deleteCurrentTool()));
+    bind("TYPE_SELECT_ALL", this, &CaptureWidget::selectAll);
 
-    newShortcut(
-      QKeySequence(ConfigHandler().shortcut("TYPE_COMMIT_CURRENT_TOOL")),
-      this,
-      SLOT(commitCurrentTool()));
-
-    newShortcut(QKeySequence(ConfigHandler().shortcut("TYPE_SELECT_ALL")),
-                this,
-                SLOT(selectAll()));
-
-    newShortcut(Qt::Key_Escape, this, SLOT(deleteToolWidgetOrClose()));
+    {
+        const auto shortcuts = newShortcut(Qt::Key_Escape, this);
+        for (auto* sc : shortcuts) {
+            connect(sc,
+                    &QShortcut::activated,
+                    this,
+                    &CaptureWidget::deleteToolWidgetOrClose);
+        }
+    }
 }
 
 void CaptureWidget::deleteCurrentTool()
@@ -1934,18 +1927,17 @@ void CaptureWidget::restoreCircleCountState()
  * @brief Wrapper around `new QShortcut`, properly handling Enter/Return.
  */
 QList<QShortcut*> CaptureWidget::newShortcut(const QKeySequence& key,
-                                             QWidget* parent,
-                                             const char* slot)
+                                             QWidget* parent)
 {
     QList<QShortcut*> shortcuts;
     QString strKey = key.toString();
     if (strKey.contains("Enter") || strKey.contains("Return")) {
         strKey.replace("Enter", "Return");
-        shortcuts << new QShortcut(strKey, parent, slot);
+        shortcuts << new QShortcut(QKeySequence(strKey), parent);
         strKey.replace("Return", "Enter");
-        shortcuts << new QShortcut(strKey, parent, slot);
+        shortcuts << new QShortcut(QKeySequence(strKey), parent);
     } else {
-        shortcuts << new QShortcut(key, parent, slot);
+        shortcuts << new QShortcut(key, parent);
     }
     return shortcuts;
 }

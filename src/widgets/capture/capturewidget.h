@@ -137,9 +137,13 @@ private:
     void makeChild(QWidget* w);
     void restoreCircleCountState();
 
-    QList<QShortcut*> newShortcut(const QKeySequence& key,
-                                  QWidget* parent,
-                                  const char* slot);
+    // Creates one or two QShortcut objects parented to `parent`. Two are
+    // created when the key sequence contains Enter/Return so both keypads and
+    // main rows trigger. Callers are responsible for connecting the returned
+    // shortcuts' `activated` signal to whatever they want — typically via a
+    // pointer-to-member-function connect so the binding is verified at
+    // compile time.
+    QList<QShortcut*> newShortcut(const QKeySequence& key, QWidget* parent);
 
     void setToolSize(int size);
 
