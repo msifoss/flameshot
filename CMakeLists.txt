@@ -85,6 +85,7 @@ option(USE_LAUNCHER_ABSOLUTE_PATH "Use absolute path for the desktop launcher" O
 option(USE_WAYLAND_CLIPBOARD "USE KF Gui Wayland Clipboard" OFF)
 option(DISABLE_UPDATE_CHECKER "Disable check for updates" OFF)
 option(ENABLE_IMGUR "Enable Imgur Uploader" OFF)
+option(BUILD_TESTING "Build the unit-test suite under tests/. CI enables this; default OFF so packagers and casual builds are unaffected." OFF)
 
 if(ENABLE_IMGUR)
   add_compile_definitions(ENABLE_IMGUR)
@@ -150,6 +151,13 @@ if(WIN32 OR APPLE)
 endif()
 
 add_subdirectory(src)
+
+if(BUILD_TESTING)
+  # include(CTest) would also enable_testing() — but it pulls in CDash / Nightly
+  # machinery we don't use. enable_testing() alone is the minimal hook.
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
 # CPack
 set(CPACK_PACKAGE_VENDOR "flameshot-org")
