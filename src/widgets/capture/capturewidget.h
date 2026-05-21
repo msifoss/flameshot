@@ -183,6 +183,26 @@ private:
     bool m_configError;
     bool m_configErrorResolved;
 
+    // Pointer ownership convention for the members below:
+    //
+    //   QPointer<T> — for things that may be `delete`'d mid-lifetime
+    //                 (e.g. m_toolWidget gets `delete`'d and recreated as
+    //                  the active tool changes; m_activeTool likewise).
+    //                 QPointer auto-nulls on deletion, which is what makes
+    //                 the bare `delete` calls in capturewidget.cpp safe.
+    //
+    //   T*          — for child widgets parented to `this`. Qt's
+    //                 parent-child machinery destroys them when
+    //                 CaptureWidget destructs; no manual `delete` happens
+    //                 anywhere in this class. Adding QPointer to these
+    //                 would not change the lifetime model — only add
+    //                 dereference-time noise.
+    //
+    // If you add a new pointer member, decide which category it belongs
+    // to and pick the type accordingly. Don't change an existing one
+    // without also auditing every site that reads it for assumptions
+    // about non-null vs. potentially-null.
+
 #if !defined(DISABLE_UPDATE_CHECKER)
     UpdateNotificationWidget* m_updateNotificationWidget;
 #endif
